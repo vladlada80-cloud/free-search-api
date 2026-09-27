@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
 import requests
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
+
+SEARXNG_URL = "https://search.ononoki.org"
+
 
 @app.route("/")
 def home():
@@ -23,54 +25,28 @@ def search():
 
     try:
         response = requests.get(
-            "https://www.google.com/search",
+            f"{SEARXNG_URL}/search",
             params={
                 "q": query,
-                "num": 10,
-                "hl": "en"
+                "format": "json",
+                "categories": "general"
             },
             headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/140.0.0.0 Safari/537.36"
-                )
+                "User-Agent": "Mozilla/5.0"
             },
-            timeout=15
+            timeout=20
         )
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        data = response.json()
 
         results = []
 
-        for block in soup.select("div.MjjYud"):
-            link = block.select_one("a")
-            title = block.select_one("h3")
-
-            if not link or not title:
-                continue
-
-            url = link.get("href")
-
-            if not url or not url.startswith("http"):
-                continue
-
-            snippet_element = block.select_one(
-                "div.VwiC3b"
-            )
-
+        for item in data.get("results", [])[:10]:
             results.append({
-                "title": title.get_text(" ", strip=True),
-                "url": url,
-                "snippet": (
-                    snippet_element.get_text(" ", strip=True)
-                    if snippet_element
-                    else ""
-                )
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "snippet": item.get("content", "")
             })
-
-            if len(results) >= 10:
-                break
 
         return jsonify({
             "query": query,
