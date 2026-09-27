@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from duckduckgo_search import DDGS
+import requests
 
 app = Flask(__name__)
 
@@ -20,24 +20,23 @@ def search():
         }), 400
 
     try:
-        results = []
-
-        with DDGS() as ddgs:
-            search_results = ddgs.text(
-                query,
-                max_results=10
-            )
-
-            for result in search_results:
-                results.append({
-                    "title": result.get("title"),
-                    "url": result.get("href"),
-                    "snippet": result.get("body")
-                })
+        response = requests.get(
+            "https://www.google.com/search",
+            params={
+                "q": query,
+                "num": 10
+            },
+            headers={
+                "User-Agent": "Mozilla/5.0"
+            },
+            timeout=15
+        )
 
         return jsonify({
             "query": query,
-            "results": results
+            "status": "search_request_sent",
+            "source": "Google",
+            "html_length": len(response.text)
         })
 
     except Exception as e:
